@@ -3,94 +3,113 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Dragon7</title>
+<title>Dragon7 Pro</title>
+
 <style>
 body{
-  background:#111;
+  background:#0f172a;
   color:#fff;
-  font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;
-  text-align:center;
+  font-family:-apple-system;
   margin:0;
-  padding:20px;
 }
 .container{
-  max-width:420px;
-  margin:0 auto;
+  max-width:430px;
+  margin:auto;
+  padding:14px;
+}
+h2{
+  text-align:center;
+}
+.card{
+  background:#1e293b;
+  border-radius:14px;
+  padding:12px;
+  margin-bottom:10px;
 }
 .stat{
-  font-size:22px;
-  margin:8px 0;
+  font-size:18px;
+  margin:5px 0;
 }
-.small{
-  font-size:16px;
-  color:#ccc;
-  margin:6px 0;
-  text-align:left;
+.big{
+  font-size:26px;
+  font-weight:700;
 }
+.green{color:#22c55e;}
+.red{color:#ef4444;}
 .grid{
   display:grid;
   grid-template-columns:repeat(3,1fr);
   gap:10px;
-  margin:20px 0;
 }
 button{
-  font-size:22px;
-  padding:16px 10px;
+  padding:16px;
+  font-size:18px;
   border:none;
-  border-radius:12px;
-  background:#2b2b2b;
+  border-radius:10px;
+  background:#334155;
   color:#fff;
 }
 button:active{
-  transform:scale(0.98);
+  transform:scale(0.97);
 }
 .wide{
-  grid-column:1 / span 3;
+  grid-column:span 3;
 }
 .tools{
   display:grid;
-  grid-template-columns:repeat(2,1fr);
+  grid-template-columns:1fr 1fr 1fr;
   gap:10px;
+  margin-top:10px;
 }
-.panel{
-  background:#1a1a1a;
-  border-radius:12px;
-  padding:10px;
-  margin-top:12px;
+.log{
+  max-height:260px;
+  overflow:auto;
+  font-size:14px;
 }
-.count-grid{
-  display:grid;
-  grid-template-columns:repeat(2,1fr);
-  gap:6px 10px;
-  text-align:left;
+.row{
+  display:flex;
+  justify-content:space-between;
+  border-bottom:1px solid rgba(255,255,255,0.08);
+  padding:6px 0;
+}
+.small{
+  font-size:14px;
+  color:#cbd5e1;
 }
 </style>
-</head>
 
+</head>
 <body>
+
 <div class="container">
 
-<h2>Dragon7</h2>
+<h2>Dragon7 Pro</h2>
 
-<div class="stat" id="rc">RC: 0</div>
-<div class="stat" id="tc">TC: 0</div>
-<div class="stat" id="bet">NO BET</div>
-<div class="stat" id="unit">下注: 0</div>
+<div class="card">
+<div class="stat">RC: <span id="rc">0</span></div>
+<div class="stat">TC: <span id="tc">0</span></div>
+<div class="stat big" id="bet">NO BET (0)</div>
+<div class="stat">下注: <span id="unit">0</span></div>
 
-<div class="stat" id="total">已出牌: 0</div>
-<div class="stat" id="remain">剩餘張數: 416</div>
-<div class="stat" id="decks">剩餘副數: 8</div>
-
-<div class="panel">
-<div class="small" id="history">最近牌: 無</div>
+<div class="stat">已出牌: <span id="total">0</span></div>
+<div class="stat">剩餘張數: <span id="remain">416</span></div>
+<div class="stat">剩餘副數: <span id="deck">8.00</span></div>
 </div>
 
-<div class="panel">
-<div class="count-grid" id="summary"></div>
+<div class="card">
+<div>本手牌</div>
+<div class="small" id="current">無</div>
+</div>
+
+<div class="card">
+<div>戰績</div>
+<div class="stat">總手數: <span id="handCount">0</span></div>
+<div class="stat">命中: <span id="hitCount">0</span></div>
+<div class="stat">盈虧: <span id="profit">0</span></div>
 </div>
 
 <div class="grid">
-<button data-card="1">1/A</button>
+<button data-card="1">A</button>
 <button data-card="2">2</button>
 <button data-card="3">3</button>
 <button data-card="4">4</button>
@@ -99,12 +118,18 @@ button:active{
 <button data-card="7">7</button>
 <button data-card="8">8</button>
 <button data-card="9">9</button>
-<button data-card="10" class="wide">10/J/Q/K</button>
+<button data-card="10" class="wide">10/JQK</button>
 </div>
 
 <div class="tools">
+<button id="end">結束此手</button>
 <button id="undo">復原</button>
 <button id="reset">新一靴</button>
+</div>
+
+<div class="card">
+<div>紀錄</div>
+<div class="log" id="log"></div>
 </div>
 
 </div>
@@ -112,6 +137,10 @@ button:active{
 <script>
 
 let cards = [];
+let currentHand = [];
+let logs = [];
+let totalProfit = 0;
+let totalHits = 0;
 
 function value(c){
   if([4,5,6,7].includes(c)) return -1;
@@ -119,70 +148,109 @@ function value(c){
   return 0;
 }
 
+// ✅ 改這裡（核心）
+function getUnit(tc){
+  if(tc >= 4) return 1;
+  return 0;
+}
+
+function label(c){
+  return c===1?"A":c;
+}
+
 function update(){
-
   let rc = cards.reduce((a,b)=>a+value(b),0);
+  let remain = 416 - cards.length;
+  let deck = remain/52;
+  let tc = deck>0 ? Math.floor(rc/deck) : 0;
+  let unit = getUnit(tc);
+  let bet = unit>0 ? "BET":"NO BET";
 
-  let remainingCards = 416 - cards.length;
-  let remainingDecks = remainingCards / 52;
+  document.getElementById("rc").innerText = rc;
+  document.getElementById("tc").innerText = tc;
+  document.getElementById("bet").innerText = bet+" ("+unit+")";
+  document.getElementById("bet").className = unit>0?"stat big green":"stat big red";
+  document.getElementById("unit").innerText = unit;
 
-  let tc = remainingDecks > 0 ? Math.floor(rc / remainingDecks) : 0;
+  document.getElementById("total").innerText = cards.length;
+  document.getElementById("remain").innerText = remain;
+  document.getElementById("deck").innerText = deck.toFixed(2);
 
-  let bet = "NO BET";
-  let unit = 0;
+  document.getElementById("current").innerText =
+    currentHand.length?currentHand.map(label).join(", "):"無";
 
-  if(tc >= 8){ bet="BET"; unit=3; }
-  else if(tc==7){ bet="BET"; unit=2; }
-  else if(tc==6){ bet="BET"; unit=1; }
+  document.getElementById("handCount").innerText = logs.length;
+  document.getElementById("hitCount").innerText = totalHits;
+  document.getElementById("profit").innerText = totalProfit;
+}
 
-  let counts = {1:0,2:0,3:0,4:0,5:0,6:0,7:0,8:0,9:0,10:0};
-  cards.forEach(c=>counts[c]++);
-
-  document.getElementById("rc").innerText = "RC: "+rc;
-  document.getElementById("tc").innerText = "TC: "+tc;
-  document.getElementById("bet").innerText = bet;
-  document.getElementById("unit").innerText = "下注: "+unit;
-
-  document.getElementById("total").innerText = "已出牌: "+cards.length;
-  document.getElementById("remain").innerText = "剩餘張數: "+remainingCards;
-  document.getElementById("decks").innerText = "剩餘副數: "+remainingDecks.toFixed(2);
-
-  document.getElementById("history").innerText =
-    "最近牌: " + (cards.slice(-15).join(", ") || "無");
-
-  document.getElementById("summary").innerHTML = `
-    A: ${counts[1]}<br>
-    2: ${counts[2]}<br>
-    3: ${counts[3]}<br>
-    4: ${counts[4]}<br>
-    5: ${counts[5]}<br>
-    6: ${counts[6]}<br>
-    7: ${counts[7]}<br>
-    8: ${counts[8]}<br>
-    9: ${counts[9]}<br>
-    10: ${counts[10]}
-  `;
+function renderLogs(){
+  document.getElementById("log").innerHTML =
+    logs.map((x,i)=>`
+      <div class="row">
+        <div>
+          #${i+1} ${x.cards}<br>
+          <span class="small">TC:${x.tc}｜下注:${x.unit}</span>
+        </div>
+        <div class="${x.pnl>=0?"green":"red"}">
+          ${x.pnl>=0?"+":""}${x.pnl}
+        </div>
+      </div>
+    `).join("");
 }
 
 document.querySelectorAll("[data-card]").forEach(btn=>{
-  btn.addEventListener("click",()=>{
-    if(cards.length<416){
-      cards.push(Number(btn.dataset.card));
-      update();
-    }
-  });
+  btn.onclick=()=>{
+    let c=Number(btn.dataset.card);
+    cards.push(c);
+    currentHand.push(c);
+    update();
+  }
 });
+
+document.getElementById("end").onclick=()=>{
+  if(currentHand.length===0) return;
+
+  let rc = cards.reduce((a,b)=>a+value(b),0);
+  let remain = 416 - cards.length;
+  let deck = remain/52;
+  let tc = deck>0 ? Math.floor(rc/deck) : 0;
+  let unit = getUnit(tc);
+
+  let hit=false;
+  if(unit>0){
+    hit = prompt("1=中龍七, 0=未中","0")==="1";
+  }
+
+  let pnl = unit>0 ? (hit?unit*40:-unit):0;
+
+  if(hit) totalHits++;
+  totalProfit += pnl;
+
+  logs.push({
+    cards: currentHand.map(label).join(", "),
+    tc, unit, pnl
+  });
+
+  currentHand=[];
+  renderLogs();
+  update();
+};
 
 document.getElementById("undo").onclick=()=>{
   cards.pop();
+  currentHand.pop();
   update();
 };
 
 document.getElementById("reset").onclick=()=>{
-  cards=[];
+  cards=[];currentHand=[];logs=[];
+  totalProfit=0;totalHits=0;
+  renderLogs();
   update();
 };
 
+renderLogs();
 update();
 
 </script>
