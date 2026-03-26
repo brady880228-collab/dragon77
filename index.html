@@ -19,7 +19,13 @@ body{
 }
 .stat{
   font-size:22px;
-  margin:12px 0;
+  margin:8px 0;
+}
+.small{
+  font-size:16px;
+  color:#ccc;
+  margin:6px 0;
+  text-align:left;
 }
 .grid{
   display:grid;
@@ -34,7 +40,6 @@ button{
   border-radius:12px;
   background:#2b2b2b;
   color:#fff;
-  cursor:pointer;
 }
 button:active{
   transform:scale(0.98);
@@ -46,97 +51,141 @@ button:active{
   display:grid;
   grid-template-columns:repeat(2,1fr);
   gap:10px;
-  margin-top:10px;
+}
+.panel{
+  background:#1a1a1a;
+  border-radius:12px;
+  padding:10px;
+  margin-top:12px;
+}
+.count-grid{
+  display:grid;
+  grid-template-columns:repeat(2,1fr);
+  gap:6px 10px;
+  text-align:left;
 }
 </style>
 </head>
+
 <body>
 <div class="container">
-  <h2>Dragon7</h2>
 
-  <div class="stat" id="rc">RC: 0</div>
-  <div class="stat" id="tc">TC: 0</div>
-  <div class="stat" id="bet">NO BET</div>
-  <div class="stat" id="unit">下注: 0</div>
+<h2>Dragon7</h2>
 
-  <div class="grid">
-    <button type="button" data-card="1">1 / A</button>
-    <button type="button" data-card="2">2</button>
-    <button type="button" data-card="3">3</button>
-    <button type="button" data-card="4">4</button>
-    <button type="button" data-card="5">5</button>
-    <button type="button" data-card="6">6</button>
-    <button type="button" data-card="7">7</button>
-    <button type="button" data-card="8">8</button>
-    <button type="button" data-card="9">9</button>
-    <button type="button" data-card="10" class="wide">10 / J / Q / K</button>
-  </div>
+<div class="stat" id="rc">RC: 0</div>
+<div class="stat" id="tc">TC: 0</div>
+<div class="stat" id="bet">NO BET</div>
+<div class="stat" id="unit">下注: 0</div>
 
-  <div class="tools">
-    <button type="button" id="undo">復原</button>
-    <button type="button" id="reset">新一靴</button>
-  </div>
+<div class="stat" id="total">已出牌: 0</div>
+<div class="stat" id="remain">剩餘張數: 416</div>
+<div class="stat" id="decks">剩餘副數: 8</div>
+
+<div class="panel">
+<div class="small" id="history">最近牌: 無</div>
+</div>
+
+<div class="panel">
+<div class="count-grid" id="summary"></div>
+</div>
+
+<div class="grid">
+<button data-card="1">1/A</button>
+<button data-card="2">2</button>
+<button data-card="3">3</button>
+<button data-card="4">4</button>
+<button data-card="5">5</button>
+<button data-card="6">6</button>
+<button data-card="7">7</button>
+<button data-card="8">8</button>
+<button data-card="9">9</button>
+<button data-card="10" class="wide">10/J/Q/K</button>
+</div>
+
+<div class="tools">
+<button id="undo">復原</button>
+<button id="reset">新一靴</button>
+</div>
+
 </div>
 
 <script>
-(function () {
-  let cards = [];
 
-  function value(c) {
-    if ([4, 5, 6, 7].includes(c)) return -1;
-    if ([8, 9].includes(c)) return 2;
-    return 0;
-  }
+let cards = [];
 
-  function update() {
-    const rc = cards.reduce((a, b) => a + value(b), 0);
-    const remainingDecks = (416 - cards.length) / 52;
-    const tc = remainingDecks > 0 ? Math.floor(rc / remainingDecks) : 0;
+function value(c){
+  if([4,5,6,7].includes(c)) return -1;
+  if([8,9].includes(c)) return 2;
+  return 0;
+}
 
-    let betText = "NO BET";
-    let unit = 0;
+function update(){
 
-    if (tc >= 8) {
-      betText = "BET";
-      unit = 3;
-    } else if (tc === 7) {
-      betText = "BET";
-      unit = 2;
-    } else if (tc === 6) {
-      betText = "BET";
-      unit = 1;
-    }
+  let rc = cards.reduce((a,b)=>a+value(b),0);
 
-    document.getElementById("rc").textContent = "RC: " + rc;
-    document.getElementById("tc").textContent = "TC: " + tc;
-    document.getElementById("bet").textContent = betText;
-    document.getElementById("unit").textContent = "下注: " + unit;
-  }
+  let remainingCards = 416 - cards.length;
+  let remainingDecks = remainingCards / 52;
 
-  document.querySelectorAll("[data-card]").forEach(function (btn) {
-    btn.addEventListener("click", function () {
-      const n = Number(btn.getAttribute("data-card"));
-      if (cards.length < 416) {
-        cards.push(n);
-        update();
-      }
-    });
-  });
+  let tc = remainingDecks > 0 ? Math.floor(rc / remainingDecks) : 0;
 
-  document.getElementById("undo").addEventListener("click", function () {
-    if (cards.length > 0) {
-      cards.pop();
+  let bet = "NO BET";
+  let unit = 0;
+
+  if(tc >= 8){ bet="BET"; unit=3; }
+  else if(tc==7){ bet="BET"; unit=2; }
+  else if(tc==6){ bet="BET"; unit=1; }
+
+  let counts = {1:0,2:0,3:0,4:0,5:0,6:0,7:0,8:0,9:0,10:0};
+  cards.forEach(c=>counts[c]++);
+
+  document.getElementById("rc").innerText = "RC: "+rc;
+  document.getElementById("tc").innerText = "TC: "+tc;
+  document.getElementById("bet").innerText = bet;
+  document.getElementById("unit").innerText = "下注: "+unit;
+
+  document.getElementById("total").innerText = "已出牌: "+cards.length;
+  document.getElementById("remain").innerText = "剩餘張數: "+remainingCards;
+  document.getElementById("decks").innerText = "剩餘副數: "+remainingDecks.toFixed(2);
+
+  document.getElementById("history").innerText =
+    "最近牌: " + (cards.slice(-15).join(", ") || "無");
+
+  document.getElementById("summary").innerHTML = `
+    A: ${counts[1]}<br>
+    2: ${counts[2]}<br>
+    3: ${counts[3]}<br>
+    4: ${counts[4]}<br>
+    5: ${counts[5]}<br>
+    6: ${counts[6]}<br>
+    7: ${counts[7]}<br>
+    8: ${counts[8]}<br>
+    9: ${counts[9]}<br>
+    10: ${counts[10]}
+  `;
+}
+
+document.querySelectorAll("[data-card]").forEach(btn=>{
+  btn.addEventListener("click",()=>{
+    if(cards.length<416){
+      cards.push(Number(btn.dataset.card));
       update();
     }
   });
+});
 
-  document.getElementById("reset").addEventListener("click", function () {
-    cards = [];
-    update();
-  });
-
+document.getElementById("undo").onclick=()=>{
+  cards.pop();
   update();
-})();
+};
+
+document.getElementById("reset").onclick=()=>{
+  cards=[];
+  update();
+};
+
+update();
+
 </script>
+
 </body>
 </html>
