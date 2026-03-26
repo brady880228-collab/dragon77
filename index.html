@@ -4,126 +4,139 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Dragon7</title>
-
 <style>
 body{
   background:#111;
   color:#fff;
-  font-family:sans-serif;
+  font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;
   text-align:center;
+  margin:0;
+  padding:20px;
 }
-
-button{
-  font-size:20px;
-  padding:15px;
-  margin:5px;
-  border-radius:10px;
-  border:none;
-}
-
 .container{
-  max-width:400px;
-  margin:auto;
+  max-width:420px;
+  margin:0 auto;
 }
-
 .stat{
-  font-size:20px;
-  margin:10px;
+  font-size:22px;
+  margin:12px 0;
+}
+.grid{
+  display:grid;
+  grid-template-columns:repeat(3,1fr);
+  gap:10px;
+  margin:20px 0;
+}
+button{
+  font-size:22px;
+  padding:16px 10px;
+  border:none;
+  border-radius:12px;
+  background:#2b2b2b;
+  color:#fff;
+  cursor:pointer;
+}
+button:active{
+  transform:scale(0.98);
+}
+.wide{
+  grid-column:1 / span 3;
+}
+.tools{
+  display:grid;
+  grid-template-columns:repeat(2,1fr);
+  gap:10px;
+  margin-top:10px;
 }
 </style>
 </head>
-
 <body>
-
 <div class="container">
+  <h2>Dragon7</h2>
 
-<h2>Dragon7</h2>
+  <div class="stat" id="rc">RC: 0</div>
+  <div class="stat" id="tc">TC: 0</div>
+  <div class="stat" id="bet">NO BET</div>
+  <div class="stat" id="unit">下注: 0</div>
 
-<div class="stat" id="rc">RC: 0</div>
-<div class="stat" id="tc">TC: 0</div>
-<div class="stat" id="bet">NO BET</div>
-<div class="stat" id="unit">下注: 0</div>
+  <div class="grid">
+    <button type="button" data-card="1">1 / A</button>
+    <button type="button" data-card="2">2</button>
+    <button type="button" data-card="3">3</button>
+    <button type="button" data-card="4">4</button>
+    <button type="button" data-card="5">5</button>
+    <button type="button" data-card="6">6</button>
+    <button type="button" data-card="7">7</button>
+    <button type="button" data-card="8">8</button>
+    <button type="button" data-card="9">9</button>
+    <button type="button" data-card="10" class="wide">10 / J / Q / K</button>
+  </div>
 
-<br>
-
-<div id="buttons"></div>
-
-<br>
-
-<button id="undo">復原</button>
-<button id="reset">新一靴</button>
-
+  <div class="tools">
+    <button type="button" id="undo">復原</button>
+    <button type="button" id="reset">新一靴</button>
+  </div>
 </div>
 
 <script>
+(function () {
+  let cards = [];
 
-let cards = [];
-
-function value(c){
-  if([4,5,6,7].includes(c)) return -1;
-  if([8,9].includes(c)) return 2;
-  return 0;
-}
-
-function update(){
-  let rc = cards.reduce((a,b)=>a+value(b),0);
-
-  let remaining = (416 - cards.length) / 52;
-  let tc = remaining > 0 ? Math.floor(rc / remaining) : 0;
-
-  let bet = "NO BET";
-  let unit = 0;
-
-  if(tc >= 8){
-    bet = "BET";
-    unit = 3;
-  }else if(tc == 7){
-    bet = "BET";
-    unit = 2;
-  }else if(tc == 6){
-    bet = "BET";
-    unit = 1;
+  function value(c) {
+    if ([4, 5, 6, 7].includes(c)) return -1;
+    if ([8, 9].includes(c)) return 2;
+    return 0;
   }
 
-  document.getElementById("rc").innerText = "RC: " + rc;
-  document.getElementById("tc").innerText = "TC: " + tc;
-  document.getElementById("bet").innerText = bet;
-  document.getElementById("unit").innerText = "下注: " + unit;
-}
+  function update() {
+    const rc = cards.reduce((a, b) => a + value(b), 0);
+    const remainingDecks = (416 - cards.length) / 52;
+    const tc = remainingDecks > 0 ? Math.floor(rc / remainingDecks) : 0;
 
-function add(n){
-  if(cards.length < 416){
-    cards.push(n);
-    update();
+    let betText = "NO BET";
+    let unit = 0;
+
+    if (tc >= 8) {
+      betText = "BET";
+      unit = 3;
+    } else if (tc === 7) {
+      betText = "BET";
+      unit = 2;
+    } else if (tc === 6) {
+      betText = "BET";
+      unit = 1;
+    }
+
+    document.getElementById("rc").textContent = "RC: " + rc;
+    document.getElementById("tc").textContent = "TC: " + tc;
+    document.getElementById("bet").textContent = betText;
+    document.getElementById("unit").textContent = "下注: " + unit;
   }
-}
 
-// 👉 這裡是關鍵（用 addEventListener）
-let container = document.getElementById("buttons");
-
-for(let i=1;i<=10;i++){
-  let btn = document.createElement("button");
-  btn.innerText = (i==1?"1/A":i==10?"10/JQK":i);
-  btn.addEventListener("click", function(){
-    add(i);
+  document.querySelectorAll("[data-card]").forEach(function (btn) {
+    btn.addEventListener("click", function () {
+      const n = Number(btn.getAttribute("data-card"));
+      if (cards.length < 416) {
+        cards.push(n);
+        update();
+      }
+    });
   });
-  container.appendChild(btn);
-}
 
-// 控制按鈕
-document.getElementById("undo").addEventListener("click", function(){
-  cards.pop();
+  document.getElementById("undo").addEventListener("click", function () {
+    if (cards.length > 0) {
+      cards.pop();
+      update();
+    }
+  });
+
+  document.getElementById("reset").addEventListener("click", function () {
+    cards = [];
+    update();
+  });
+
   update();
-});
-
-document.getElementById("reset").addEventListener("click", function(){
-  cards = [];
-  update();
-});
-
-update();
-
+})();
 </script>
-
 </body>
 </html>
