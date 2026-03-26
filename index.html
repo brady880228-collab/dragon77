@@ -1,0 +1,129 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Dragon7</title>
+
+<style>
+body{
+  background:#111;
+  color:#fff;
+  font-family:sans-serif;
+  text-align:center;
+}
+
+button{
+  font-size:20px;
+  padding:15px;
+  margin:5px;
+  border-radius:10px;
+  border:none;
+}
+
+.container{
+  max-width:400px;
+  margin:auto;
+}
+
+.stat{
+  font-size:20px;
+  margin:10px;
+}
+</style>
+</head>
+
+<body>
+
+<div class="container">
+
+<h2>Dragon7</h2>
+
+<div class="stat" id="rc">RC: 0</div>
+<div class="stat" id="tc">TC: 0</div>
+<div class="stat" id="bet">NO BET</div>
+<div class="stat" id="unit">下注: 0</div>
+
+<br>
+
+<div id="buttons"></div>
+
+<br>
+
+<button id="undo">復原</button>
+<button id="reset">新一靴</button>
+
+</div>
+
+<script>
+
+let cards = [];
+
+function value(c){
+  if([4,5,6,7].includes(c)) return -1;
+  if([8,9].includes(c)) return 2;
+  return 0;
+}
+
+function update(){
+  let rc = cards.reduce((a,b)=>a+value(b),0);
+
+  let remaining = (416 - cards.length) / 52;
+  let tc = remaining > 0 ? Math.floor(rc / remaining) : 0;
+
+  let bet = "NO BET";
+  let unit = 0;
+
+  if(tc >= 8){
+    bet = "BET";
+    unit = 3;
+  }else if(tc == 7){
+    bet = "BET";
+    unit = 2;
+  }else if(tc == 6){
+    bet = "BET";
+    unit = 1;
+  }
+
+  document.getElementById("rc").innerText = "RC: " + rc;
+  document.getElementById("tc").innerText = "TC: " + tc;
+  document.getElementById("bet").innerText = bet;
+  document.getElementById("unit").innerText = "下注: " + unit;
+}
+
+function add(n){
+  if(cards.length < 416){
+    cards.push(n);
+    update();
+  }
+}
+
+// 👉 這裡是關鍵（用 addEventListener）
+let container = document.getElementById("buttons");
+
+for(let i=1;i<=10;i++){
+  let btn = document.createElement("button");
+  btn.innerText = (i==1?"1/A":i==10?"10/JQK":i);
+  btn.addEventListener("click", function(){
+    add(i);
+  });
+  container.appendChild(btn);
+}
+
+// 控制按鈕
+document.getElementById("undo").addEventListener("click", function(){
+  cards.pop();
+  update();
+});
+
+document.getElementById("reset").addEventListener("click", function(){
+  cards = [];
+  update();
+});
+
+update();
+
+</script>
+
+</body>
+</html>
